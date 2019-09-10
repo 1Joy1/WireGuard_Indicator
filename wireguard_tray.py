@@ -25,9 +25,8 @@ APP_VERSION = "1.0"
 DESCRIPTION = u"""
 Индикатор панели задач для WireGuard.
 Позволяет видеть поднят ли в данный момент
-сетевой интерфейс тунеля,
-а так же управлять запуском и остановкой интерфейса,
-для VPN тунеля.
+сетевой интерфейс тунеля, а так же управлять
+запуском и остановкой VPN тунеля.
 """
 LICENSE ="""
 Permission is hereby granted, free of charge, to any person obtaining
@@ -73,8 +72,8 @@ class WGIndicator(object):
 
         self.loop_stoping = False
         self.check_status_loop = threading.Thread(target=self.checkStatusThredingLoop)
+        self.check_status_loop.daemon = True
         self.check_status_loop.start()
-
 
 
     def checkStatusThredingLoop(self):
@@ -115,7 +114,6 @@ class WGIndicator(object):
         return menu
 
 
-
     def startAction(self, source):
         if not self.getTunelState():
             process = subprocess.Popen(['gksudo', 'wg-quick', 'up', self.tunel_interface_name],
@@ -131,7 +129,6 @@ class WGIndicator(object):
                 self.showNotifycation(u"Для выполнения этой операции,\n требуется пароль пользователя.")
             else:
                 self.showNotifycation(err)
-
 
 
     def stopAction(self, source):
@@ -151,7 +148,6 @@ class WGIndicator(object):
                 self.showNotifycation(err)
 
 
-
     def checkAction(self, source):
         self.showNotifycation(u"Сетевой интерфейс " + self.tunel_interface_name + u" установлен!"
             if self.getTunelState() == True else u"Сетевой интерфейс " + self.tunel_interface_name + u" не поднят!")
@@ -166,14 +162,14 @@ class WGIndicator(object):
         about.set_program_name(APP_NAME)
         about.set_version('Version ' + APP_VERSION)
         about.set_logo(logo)
-        about.set_website('https://github.com/1Joy1')
+        about.set_website('https://github.com/1Joy1/WireGuard_Indicator')
         about.set_website_label('Домашняя страница.')
         about.set_authors(['Marshak Igor aka !Joy! https://github.com/1Joy1'])
         about.set_copyright('(c) 2019 Marshak Igor aka !Joy!')
         about.set_comments(DESCRIPTION)
         about.set_license(LICENSE)
         about.set_transient_for(window)
-        about.set_modal(True)
+        about.set_keep_above(True)
 
         about.run()
         about.destroy()
@@ -198,18 +194,14 @@ class WGIndicator(object):
         self.lock_file.remove()
 
 
-
-
     def showNotifycation(self, body):
         self.notification.update("<b>WireGuard VPN</b>", body, APP_ICON)
         self.notification.set_timeout(3)
         self.notification.show()
 
 
-
     def getTunelState(self):
         return commands.getoutput("wg show interfaces") == self.tunel_interface_name
-
 
 
     def getIcon(self, is_tunel_up):
@@ -227,12 +219,12 @@ class WGIndicator(object):
 
 
 
-
 class LockFile(object):
     def __init__(self, interface_name):
         self.interface_name = interface_name
         self.lock_file_path = CURR_PATH_APP + "/" + self.interface_name + ".lock"
         self.locked_file = None
+
 
     def create(self):
         self.locked_file = open(self.lock_file_path, "a")
@@ -241,9 +233,12 @@ class LockFile(object):
         except:
             sys.exit(0)
 
+
     def remove(self):
         if os.path.isfile(self.lock_file_path):
             os.remove(self.lock_file_path)
+
+
 
 
 class Config(object):
@@ -252,6 +247,7 @@ class Config(object):
         self.config_file_path = CURR_PATH_APP + "/" + self.file_name_config
         self.notification = notification
         self.cfgParser = SafeConfigParser();
+
 
     def load(self):
         if not os.path.isfile(self.config_file_path):
@@ -266,15 +262,18 @@ class Config(object):
         self.checkConfig(config_interface_name)
         return config_interface_name
 
+
     def checkConfig(self, config_interface_name):
         if not os.path.isfile("/etc/wireguard/" + config_interface_name + ".conf"):
             self.showNotifycation(u"Имя интерфейса в настройках, не соответствует конфиг файлу в\n /etc/wireguard/\nПриложение будет закрыто!")
             sys.exit(0)
 
+
     def showNotifycation(self, body):
         self.notification.update("<b>WireGuard VPN</b>", body, APP_ICON)
         self.notification.set_timeout(3)
         self.notification.show()
+
 
 
 
@@ -293,4 +292,3 @@ if __name__=='__main__':
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
     gtk.main()
-
