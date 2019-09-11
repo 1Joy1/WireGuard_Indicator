@@ -28,23 +28,6 @@ DESCRIPTION = u"""
 сетевой интерфейс тунеля, а так же управлять
 запуском и остановкой VPN тунеля.
 """
-LICENSE ="""
-Permission is hereby granted, free of charge, to any person obtaining
-a copy of this software and associated documentation files
-(the "Software"), to deal in the Software without restriction, including
-without limitation the rights to use, copy, modify, merge, publish,
-distribute, sublicense, and/or sell copies of the Software, and to
-permit persons to whom the Software is furnished to do so, subject
-to the following conditions:
-The above copyright notice and this permission notice shall be included
-in all copies or substantial portions of the Software.
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-DEALINGS IN THE SOFTWARE."""
 
 
 
@@ -158,6 +141,15 @@ class WGIndicator(object):
 
         logo = gdkpixbuf.Pixbuf.new_from_file(APP_ICON).scale_simple(48, 48, gdkpixbuf.InterpType.BILINEAR)
 
+        if os.path.isfile(CURR_PATH_APP + '/LICENSE'):
+            license_file = open(CURR_PATH_APP + '/LICENSE', 'r')
+            license = license_file.read()
+            license_file.close()
+        else:
+            license = """
+            The MIT License (MIT)
+            Copyright (c) 2019 Marshak Igor aka !Joy!"""
+
         about = gtk.AboutDialog()
         about.set_program_name(APP_NAME)
         about.set_version('Version ' + APP_VERSION)
@@ -167,7 +159,7 @@ class WGIndicator(object):
         about.set_authors(['Marshak Igor aka !Joy! https://github.com/1Joy1'])
         about.set_copyright('(c) 2019 Marshak Igor aka !Joy!')
         about.set_comments(DESCRIPTION)
-        about.set_license(LICENSE)
+        about.set_license(license)
         about.set_transient_for(window)
         about.set_keep_above(True)
 
