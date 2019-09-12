@@ -20,6 +20,10 @@ echo "Type=Application" >> $sys_myapp_desktop
 echo "Categories=Application" >> $sys_myapp_desktop
 echo "NoDisplay=True" >> $sys_myapp_desktop
 
+#Add autoloading
+#cp $sys_myapp_desktop $HOME/.config/autostart
+
+#Copy desktop file in work folder
 cp $sys_myapp_desktop $PWD/wireguard_tray.desktop
 chmod +x wireguard_tray.desktop
 
