@@ -18,7 +18,7 @@ echo "Icon=wireguard_icon.png" >> $sys_myapp_desktop
 echo "Terminal=false" >> $sys_myapp_desktop
 echo "Type=Application" >> $sys_myapp_desktop
 echo "Categories=Application" >> $sys_myapp_desktop
-echo "NoDisplay=True" >> $sys_myapp_desktop
+echo "NoDisplay=true" >> $sys_myapp_desktop
 
 #Add autoloading
 #cp $sys_myapp_desktop $HOME/.config/autostart

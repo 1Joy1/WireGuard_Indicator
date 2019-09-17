@@ -8,14 +8,14 @@ import signal
 import sys
 import fcntl
 import time
-import threading, time
 
 gi.require_version('Gtk', '3.0')
 gi.require_version('AppIndicator3', '0.1')
 gi.require_version('Notify', '0.7')
 gi.require_version('GdkPixbuf', '2.0')
-from gi.repository import Gtk as gtk, AppIndicator3 as appindicator, Notify as notify, GdkPixbuf as gdkpixbuf
+from gi.repository import Gtk as gtk, AppIndicator3 as appindicator, Notify as notify, GdkPixbuf as gdkpixbuf, GObject
 from ConfigParser import SafeConfigParser
+from threading import Thread
 
 CURR_PATH_APP = os.path.dirname(os.path.realpath(__file__))
 APP_ID = "wire_guard_tray"
@@ -32,11 +32,12 @@ DESCRIPTION = u"""
 
 
 class WGIndicator(object):
-    def __init__(self, tunel_interface_name, lock_file, notification):
+    def __init__(self, tunel_interface_name, auto_update_interval, lock_file, notification):
         self.activ_icon = CURR_PATH_APP + "/icons/wireguard_icon_a.png"
         self.not_activ_icon = CURR_PATH_APP + "/icons/wireguard_icon_na.png"
 
         self.tunel_interface_name = tunel_interface_name
+        self.auto_update_interval = auto_update_interval
         self.lock_file = lock_file
 
         self.notification = notification
@@ -54,15 +55,15 @@ class WGIndicator(object):
         self.indicator.set_ordering_index(2154500000)
 
         self.loop_stoping = False
-        self.check_status_loop = threading.Thread(target=self.checkStatusThredingLoop)
+        self.check_status_loop = Thread(target=self.checkStatusThredingLoop)
         self.check_status_loop.daemon = True
         self.check_status_loop.start()
 
 
     def checkStatusThredingLoop(self):
         while not self.loop_stoping:
-            self.updateIndicator()
-            time.sleep(1)
+            GObject.idle_add(self.updateIndicator, priority=GObject.PRIORITY_DEFAULT)
+            time.sleep(self.auto_update_interval)
 
 
     def createMenu(self, is_tunel_up):
@@ -210,7 +211,6 @@ class WGIndicator(object):
 
 
 
-
 class LockFile(object):
     def __init__(self, interface_name):
         self.interface_name = interface_name
@@ -238,30 +238,58 @@ class Config(object):
         self.file_name_config = "wireguard_tray.conf"
         self.config_file_path = CURR_PATH_APP + "/" + self.file_name_config
         self.notification = notification
-        self.cfgParser = SafeConfigParser();
+        self.cfgParser = SafeConfigParser()
+        self.loadConfig()
 
 
-    def load(self):
+    def loadConfig(self):
         if not os.path.isfile(self.config_file_path):
             self.showNotifycation(u"Отсутствует файл " + self.file_name_config + u"\nПриложение будет закрыто!")
             sys.exit(0)
+
         self.cfgParser.read(self.config_file_path)
+
+        if not self.cfgParser.has_section('wire_guard_indicator_settings'):
+            self.showNotifycation(u"В конфиге, отсутствует секция [wire_guard_indicator_settings]\nПриложение будет закрыто!")
+            sys.exit(0)
+
+
+    def getInterfaceName(self):
         try:
             config_interface_name = self.cfgParser.get('wire_guard_indicator_settings','interface_name')
         except:
-            self.showNotifycation(u"В конфиге, отсутствует секция [wire_guard_indicator_settings]\nили параметр interface_name.\nПриложение будет закрыто!")
+            self.showNotifycation(u"В конфиге, отсутствует параметр interface_name.\nПриложение будет закрыто!")
             sys.exit(0)
-        self.checkConfig(config_interface_name)
+
+        self.checkConfigInterfaceName(config_interface_name)
         return config_interface_name
 
 
-    def checkConfig(self, config_interface_name):
+    def getIntervalCheckStatus(self):
+        try:
+            config_interval_check_status = self.cfgParser.getint('wire_guard_indicator_settings','interval_check_status')
+        except:
+            self.showNotifycation(u"В конфиге, отсутствует параметр interval_check_status.\nИли его значение не является числом\nПриложение будет закрыто!")
+            sys.exit(0)
+
+        self.checkConfigIntervalCheckStatus(config_interval_check_status)
+        return config_interval_check_status
+
+
+    def checkConfigInterfaceName(self, config_interface_name):
         if not os.path.isfile("/etc/wireguard/" + config_interface_name + ".conf"):
             self.showNotifycation(u"Имя интерфейса в настройках, не соответствует конфиг файлу в\n /etc/wireguard/\nПриложение будет закрыто!")
             sys.exit(0)
 
 
+    def checkConfigIntervalCheckStatus(self, config_interval_check_status):
+        if config_interval_check_status < 1:
+            self.showNotifycation(u"Параметр interval_check_status.\nНе должен быть меньше 1\nПриложение будет закрыто!")
+            sys.exit(0)
+
+
     def showNotifycation(self, body):
+        print(u"\nОШИБКА ФАЙЛА НАСТРОЕК wireguard_tray.conf:\n" + body)
         self.notification.update("<b>WireGuard VPN</b>", body, APP_ICON)
         self.notification.set_timeout(3)
         self.notification.show()
@@ -275,12 +303,14 @@ if __name__=='__main__':
     notification.show()
 
     config = Config(notification)
-    interface_name = config.load()
-
+    interface_name = config.getInterfaceName()
+    interval_check_status = config.getIntervalCheckStatus()
     lock_file = LockFile(interface_name)
     lock_file.create()
 
-    WGIndicator(interface_name, lock_file, notification)
+    GObject.threads_init()
+
+    WGIndicator(interface_name, interval_check_status, lock_file, notification)
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
     gtk.main()
